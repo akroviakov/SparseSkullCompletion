@@ -1,4 +1,7 @@
 '''
+Author:
+https://github.com/OldaKodym/evaluation_metrics/blob/master/metrics.py
+
 Calculation of similarity between two binary volumes. Includes:
 - Dice Similarity Score (DSC)
 - Border Dice Similarity Score (BDSC)
