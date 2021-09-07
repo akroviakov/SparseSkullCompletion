@@ -158,7 +158,6 @@ class CollationAndTransformation:
         defective, complete, shape = list(zip(*list_data))
         if self.pepper:
             defective = self.random_pt_sample(defective)
-            complete = [np.concatenate((com, defective[idx])) for idx, com in enumerate(complete)]
         return {
             "defective": ME.utils.batched_coordinates(defective),
             "complete": [torch.from_numpy(comp).float() for comp in complete],
