@@ -8,7 +8,7 @@ from torch.utils.data.sampler import Sampler
 
 FULL_TRAINING_ROOT = "../training_set"
 EDGES_TRAINING_ROOT = "../training_edges"
-EDGES_FULL_IMPLANT_TRAINING_ROOT = "../training_edges_full_implant"
+EDGES_FULL_IMPLANT_TRAINING_ROOT = "../training_edges_full_implant_ERODE_1"
 
 TEST_ROOT = "../test_set_for_participants"
 TEST_EDGES_ROOT = "../TEST_edges_full_implant"
@@ -360,6 +360,7 @@ def test_set_to_edges(test_dir=TEST_ROOT,
     else:
         os.mkdir(test_dir_edges)
         os.mkdir(test_dir_edges + '/defective_skull')
+        os.mkdir(test_dir_edges + '/Predictions')
         if additional:
             os.mkdir(additional_dir)
 

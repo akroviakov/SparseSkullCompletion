@@ -1,27 +1,9 @@
-#######################################__________________________________________________--
-# Copyright (c) Chris Choy (chrischoy@ai.stanford.edu).
+#######################################
+# This work is based on "4D Spatio-Temporal ConvNets: Minkowski Convolutional Neural
+# Networks", CVPR'19 (https://arxiv.org/abs/1904.08755).
 #
-# Permission is hereby granted, free of charge, to any person obtaining a copy of
-# this software and associated documentation files (the "Software"), to deal in
-# the Software without restriction, including without limitation the rights to
-# use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
-# of the Software, and to permit persons to whom the Software is furnished to do
-# so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-# SOFTWARE.
-#
-# Please cite "4D Spatio-Temporal ConvNets: Minkowski Convolutional Neural
-# Networks", CVPR'19 (https://arxiv.org/abs/1904.08755) if you use any part
-# of the code.
+# ME's homepage: https://github.com/NVIDIA/MinkowskiEngine
+
 import gc, metrics, nrrd, torch, data_skull, argparse
 import numpy as np
 import torch.nn as nn
@@ -30,7 +12,7 @@ import torch.optim as optim
 import MinkowskiEngine as ME
 from time import time
 
-#  torch.cuda.is_available = lambda : False  # To force CPU usage across ME
+# torch.cuda.is_available = lambda : False  # To force CPU usage across ME
 parser = argparse.ArgumentParser()
 parser.add_argument("--batch_size", default=1, type=int)
 parser.add_argument("--num_workers", type=int, default=0)
@@ -269,9 +251,9 @@ class CompletionNet(nn.Module):
         enc_s32 = self.enc_block_s16s32(enc_s16)
         enc_s64 = self.enc_block_s32s64(enc_s32)
 
-        # ##################################################
-        # # Decoder 64 -> 32
-        # ##################################################
+        ##################################################
+        # Decoder 64 -> 32
+        ##################################################
         dec_s32 = self.dec_block_s64s32(enc_s64) + enc_s32
         # Add encoder features
         dec_s32_cls = self.dec_s32_cls(dec_s32)
@@ -290,9 +272,9 @@ class CompletionNet(nn.Module):
         gc.collect()
         torch.cuda.empty_cache()
 
-        # ##################################################
-        # # Decoder 32 -> 16
-        # ##################################################
+        ##################################################
+        # Decoder 32 -> 16
+        ##################################################
         dec_s16 = self.dec_block_s32s16(dec_s32) + enc_s16
 
         dec_s16_cls = self.dec_s16_cls(dec_s16)
@@ -441,8 +423,6 @@ def train(net, train_dataloader, valid_dataloader, device, config):
             # with open(f"metrics_{epoch}.txt", "w+") as output:
             #     output.write(str([ds, bds, hd_95, hd]))
             net.train()
-        # elif epoch != 0 and len(EVAL_LOSS) > 0:
-        #     EVAL_LOSS.append(EVAL_LOSS[len(EVAL_LOSS)-1])
 
         if epoch % 2 == 0 and epoch != 0:
             print(f"SAVING at {epoch}th epoch")
@@ -463,14 +443,13 @@ def train(net, train_dataloader, valid_dataloader, device, config):
                 device=device,
             )
 
-            # Generate target sparse tensor
             cm = sin.coordinate_manager
             target_key, _ = cm.insert_and_map(
                 ME.utils.batched_coordinates(data_dict["complete"]).to(device),
                 string_id="target",
             )
 
-            # Generate from a dense tensor
+
             print(f"_________________START[{epoch}|{i}]___________________________")
             out_cls, targets, sout, losst = net(sin, target_key)
             print(len(sin), "->", len(sout), "/", len(data_dict["complete"][0]))
@@ -519,7 +498,6 @@ def eval(net, dataloader, device, it):
                 coordinates=data_dict["defective"],
                 device=device,
             )
-            # Generate target sparse tensor
             cm = sin.coordinate_manager
 
             target_key, _ = cm.insert_and_map(
@@ -527,7 +505,7 @@ def eval(net, dataloader, device, it):
                 string_id="target",
             )
             CUR_RES = torch.Size(data_dict["shape"][0])
-            # Generate from a dense tensor
+
             print(f"_________________START[{it}]___________________________")
             out_cls, targets, sout, losst = net(sin, target_key)
             print(len(sin), "->", len(sout), "/", len(data_dict["complete"][0]))
@@ -582,7 +560,7 @@ def test(net, dataloader, device, it):
     net.eval()
     with torch.no_grad():
         for j, d in enumerate(dataloader):
-            data_dict = d # next(iter(dataloader))
+            data_dict = d
             in_feat = torch.ones((len(data_dict[0].squeeze()), 1))
             sin = ME.SparseTensor(
                 features=in_feat,
@@ -599,7 +577,7 @@ def test(net, dataloader, device, it):
             print(len(sin), "->", len(sout))
             print("Plotting")
             string = str(j).zfill(3)
-            data, header = nrrd.read(f"../../../test_set_for_participants/{string}.nrrd")
+            data, header = nrrd.read(data_skull.TEST_EDGES_ROOT + f"/{string}.nrrd")
             dense_in = ME.MinkowskiToDenseTensor(CUR_RES)(sin).detach().cpu().squeeze().numpy()
             dense_out = get_dense(net, sout, CUR_RES).cpu().squeeze().numpy()
             implant = data_skull.filter_implant(dense_out, dense_in)
@@ -613,9 +591,9 @@ def test(net, dataloader, device, it):
 
             string = str(j).zfill(3)
 
-            nrrd.write(f"../../../TEST_edges_full_implant/Predictions/{string}IMPLANT.nrrd", implant.astype('int32'), header)
-            nrrd.write(f"../../../TEST_edges_full_implant/Predictions/{string}IN.nrrd", data, header)
-            nrrd.write(f"../../../TEST_edges_full_implant/Predictions/{string}OUT.nrrd", out.astype('int32'), header)
+            nrrd.write(data_skull.TEST_EDGES_ROOT + f"/Predictions/{string}IMPLANT.nrrd", implant.astype('int32'), header)
+            nrrd.write(data_skull.TEST_EDGES_ROOT + f"/Predictions/{string}IN.nrrd", data, header)
+            nrrd.write(data_skull.TEST_EDGES_ROOT + f"/Predictions/{string}OUT.nrrd", out.astype('int32'), header)
             del implant, dense_in, dense_out
             print(f"_________________FINISH[{it}]__________________________")
             del losst, sout, sin, targets, out_cls
@@ -628,6 +606,7 @@ if __name__ == '__main__':
     np.random.seed(211)
     torch.manual_seed(config.torch_seed)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(device)
 
     train_loader, valid_loader = data_skull.get_train_valid_loader(
         batch_size=config.batch_size,
